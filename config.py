@@ -55,6 +55,12 @@ BLUESKY_MAX_POSTS = 50
 CLUSTER_SIMILARITY_THRESHOLD = 0.82  # Cosine similarity; tune so minor wording stays in same cluster
 MAX_CLUSTERS = 20  # Cap to avoid runaway
 
+# --- Semantic verification (model-based) ---
+SEMANTIC_SIMILARITY_THRESHOLD = 0.75  # Claim supported if max cosine(corpus) >= this
+CONFIDENCE_LOW_THRESHOLD = 0.4  # Below = "low"
+CONFIDENCE_MEDIUM_THRESHOLD = 0.7  # Above = "high"; between = "medium"
+MUTATION_LOG_PATH = Path(__file__).resolve().parent / "data" / "mutations.jsonl"
+
 # --- Backend ---
 BACKEND_HOST = os.environ.get("BACKEND_HOST", "127.0.0.1")
 BACKEND_PORT = int(os.environ.get("BACKEND_PORT", "8000"))

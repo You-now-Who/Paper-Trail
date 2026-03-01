@@ -160,32 +160,65 @@
   function renderProvenance(res) {
     const wrap = document.createElement('div');
     wrap.className = 'pt-provenance';
-    const origin = res.origin || {};
+
+    const us = res.user_summary || {};
+    const oneLiner = us.one_liner || 'No result.';
+    const confidence = (us.confidence || 'medium').toLowerCase();
+    const confClass = 'pt-confidence pt-' + confidence;
+
     wrap.innerHTML =
-      '<div class="pt-card pt-origin">' +
-      '<div class="pt-card-title">Origin</div>' +
-      '<div class="pt-meta">' + escapeHtml(origin.source || '') + ' · ' + escapeHtml(origin.community || '') + ' · ' + escapeHtml(origin.timestamp || '') + '</div>' +
-      '<div class="pt-text">' + escapeHtml((origin.text || '').slice(0, 400)) + ((origin.text || '').length > 400 ? '…' : '') + '</div></div>';
-    if (res.timeline && res.timeline.length) {
-      let tl = '<div class="pt-timeline"><div class="pt-card-title">Mutation timeline</div>';
-      res.timeline.forEach(function (e) {
-        tl += '<div class="pt-card pt-entry"><div class="pt-meta">' + escapeHtml(e.source) + ' · ' + escapeHtml(e.community) + '</div>' +
-          (e.mutation_note ? '<div class="pt-mutation">' + escapeHtml(e.mutation_note) + '</div>' : '') +
-          '<div class="pt-text">' + escapeHtml((e.text || '').slice(0, 300)) + '…</div></div>';
+      '<div class="pt-card-header">' +
+      '<div class="pt-summary">' +
+      '<div class="pt-one-liner">' + escapeHtml(oneLiner) + '</div>' +
+      '<span class="' + confClass + '" aria-label="Confidence: ' + escapeHtml(confidence) + '">' + escapeHtml(confidence) + '</span>' +
+      '</div>' +
+      '<button type="button" class="pt-report-btn" aria-label="View full report">View report</button>' +
+      '</div>';
+
+    const reportBtn = wrap.querySelector('.pt-report-btn');
+    reportBtn.addEventListener('click', function () {
+      chrome.runtime.sendMessage({ type: 'REPORT', payload: res }, function (r) {
+        if (r && r.error) console.error('[PaperTrail] Report error:', r.error);
       });
-      tl += '</div>';
-      wrap.innerHTML += tl;
-    }
-    if (res.diff && (res.diff.removed && res.diff.removed.length || res.diff.added && res.diff.added.length)) {
-      let d = '<div class="pt-diff"><div class="pt-card-title">Narrative diff</div><div class="pt-diff-list">';
-      (res.diff.removed || []).forEach(function (p) { d += '<span class="pt-removed">− ' + escapeHtml(p) + '</span>'; });
-      (res.diff.added || []).forEach(function (p) { d += '<span class="pt-added">+ ' + escapeHtml(p) + '</span>'; });
-      d += '</div></div>';
-      wrap.innerHTML += d;
-    }
-    if (res.reply_draft) {
-      wrap.innerHTML += '<div class="pt-reply"><div class="pt-card-title">Reply draft</div><div class="pt-reply-text">' + escapeHtml(res.reply_draft) + '</div><button type="button" class="pt-copy-btn">Copy reply</button></div>';
-      const copyBtn = wrap.querySelector('.pt-copy-btn');
+    });
+
+    // Optional "Show more" to expand full provenance
+    const hasMore = res.origin && (res.timeline && res.timeline.length || res.diff && (res.diff.removed && res.diff.removed.length || res.diff.added && res.diff.added.length) || res.reply_draft);
+    if (hasMore && us.show_more) {
+      const moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'pt-more-btn';
+      moreBtn.textContent = 'Show details';
+      wrap.appendChild(moreBtn);
+      const details = document.createElement('div');
+      details.className = 'pt-details';
+      details.style.display = 'none';
+
+      const origin = res.origin || {};
+      details.innerHTML =
+        '<div class="pt-card pt-origin"><div class="pt-card-title">Origin</div>' +
+        '<div class="pt-meta">' + escapeHtml(origin.source || '') + ' · ' + escapeHtml(origin.community || '') + '</div>' +
+        '<div class="pt-text">' + escapeHtml((origin.text || '').slice(0, 300)) + ((origin.text || '').length > 300 ? '…' : '') + '</div></div>';
+
+      if (res.diff && (res.diff.removed && res.diff.removed.length || res.diff.added && res.diff.added.length)) {
+        let d = '<div class="pt-diff"><div class="pt-card-title">Diff</div><div class="pt-diff-list">';
+        (res.diff.removed || []).forEach(function (p) { d += '<span class="pt-removed">− ' + escapeHtml(p) + '</span>'; });
+        (res.diff.added || []).forEach(function (p) { d += '<span class="pt-added">+ ' + escapeHtml(p) + '</span>'; });
+        d += '</div></div>';
+        details.innerHTML += d;
+      }
+      if (res.reply_draft) {
+        details.innerHTML += '<div class="pt-reply"><div class="pt-card-title">Reply draft</div><div class="pt-reply-text">' + escapeHtml(res.reply_draft) + '</div><button type="button" class="pt-copy-btn">Copy reply</button></div>';
+      }
+
+      wrap.appendChild(details);
+      moreBtn.addEventListener('click', function () {
+        const show = details.style.display === 'none';
+        details.style.display = show ? 'block' : 'none';
+        moreBtn.textContent = show ? 'Hide details' : 'Show details';
+      });
+
+      const copyBtn = details.querySelector('.pt-copy-btn');
       if (copyBtn) copyBtn.addEventListener('click', function () {
         navigator.clipboard.writeText(res.reply_draft).then(function () {
           copyBtn.textContent = 'Copied';

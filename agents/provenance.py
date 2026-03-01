@@ -61,6 +61,7 @@ def build_timeline(
             source=first_post.source,
             community=first_post.community,
             timestamp=first_post.timestamp,
+            url=first_post.url or "",
         )
     else:
         origin = OriginCard(
@@ -112,6 +113,7 @@ def build_timeline(
                 community=post.community,
                 timestamp=post.timestamp,
                 mutation_note=note,
+                url=post.url or "",
             )
         )
 

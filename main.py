@@ -9,10 +9,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import uuid
 from typing import List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 from schemas import (
     TraceRequest,
@@ -22,6 +24,8 @@ from schemas import (
     DiffResult,
     RawPost,
     Cluster,
+    UserSummary,
+    MutationLogEntry,
 )
 from config import (
     OPENAI_API_KEY,
@@ -37,6 +41,11 @@ from agents.cluster import cluster_posts
 from agents.provenance import build_timeline
 from agents.diff import narrative_diff
 from agents.reply import draft_reply
+from agents.structural_rules import run_structural_rules
+from agents.semantic_verifier import verify_diff_phrases, verify_mutation_notes
+from agents.synthesis import build_user_summary
+from audit.mutation_log import append_mutation
+from report import generate_report
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,7 +53,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Paper Trail", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://bsky.app", "https://*.bsky.app"],
+    allow_origins=["https://bsky.app", "https://*.bsky.app", "http://localhost:8080", "http://127.0.0.1:8080"],
+    allow_origin_regex=r"chrome-extension://.*",
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
@@ -117,6 +127,18 @@ def health():
     return {"status": "ok"}
 
 
+@app.post("/report", response_class=HTMLResponse)
+async def report(req: Request):
+    """Generate full HTML report. Accepts JSON body (ProvenanceResponse)."""
+    try:
+        data = await req.json()
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    return HTMLResponse(content=generate_report(data))
+
+
 @app.post("/trace")
 async def trace(req: TraceRequest) -> ProvenanceResponse:
     """
@@ -183,12 +205,19 @@ async def trace(req: TraceRequest) -> ProvenanceResponse:
             current_text=req.text or "",
             mutation_summary="No prior sources found.",
         )
+        rule_checks = run_structural_rules([], [], 0)
+        user_summary = build_user_summary(origin, [], diff, rule_checks, [], 0, errors, warnings)
         return ProvenanceResponse(
+            user_summary=user_summary,
             origin=origin,
             timeline=[],
             diff=diff,
             reply_draft=reply,
             total_sources_checked=0,
+            current_post_url=req.url or "",
+            rule_checks=rule_checks,
+            semantic_verifications=[],
+            mutations_log=[],
             errors=errors,
             warnings=warnings,
         )
@@ -215,12 +244,64 @@ async def trace(req: TraceRequest) -> ProvenanceResponse:
         mutation_summary=mutation_summary,
     )
 
+    # Structural rules
+    rule_checks = run_structural_rules(corpus, timeline, total_sources)
+
+    # Semantic verification (model-based): diff phrases and mutation notes
+    semantic_verifications: list = []
+    try:
+        sv_diff = verify_diff_phrases(diff.removed, diff.added, corpus, origin.text or "")
+        semantic_verifications.extend(sv_diff)
+        mutation_notes = [e.mutation_note for e in timeline if e.mutation_note]
+        sv_notes = verify_mutation_notes(mutation_notes, corpus)
+        semantic_verifications.extend(sv_notes)
+    except Exception as e:
+        logger.warning("Semantic verification failed: %s", e)
+
+    # Mutation log (append-only)
+    trace_id = str(uuid.uuid4())
+    mutations_log: list[MutationLogEntry] = []
+    for phrase in diff.removed:
+        mutations_log.append(MutationLogEntry(
+            trace_id=trace_id,
+            agent_id="diff",
+            mutation_type="phrase_removed",
+            source_span=phrase,
+            target_span="",
+            confidence=0.8,
+            evidence_corpus_indices=[],
+            abstained=False,
+        ))
+        append_mutation(trace_id, "diff", "phrase_removed", phrase, "", 0.8, [])
+    for phrase in diff.added:
+        mutations_log.append(MutationLogEntry(
+            trace_id=trace_id,
+            agent_id="diff",
+            mutation_type="phrase_added",
+            source_span="",
+            target_span=phrase,
+            confidence=0.8,
+            evidence_corpus_indices=[],
+            abstained=False,
+        ))
+        append_mutation(trace_id, "diff", "phrase_added", "", phrase, 0.8, [])
+
+    # User summary (primary for extension)
+    user_summary = build_user_summary(
+        origin, timeline, diff, rule_checks, semantic_verifications, total_sources, errors, warnings
+    )
+
     return ProvenanceResponse(
+        user_summary=user_summary,
         origin=origin,
         timeline=timeline,
         diff=diff,
         reply_draft=reply,
         total_sources_checked=total_sources,
+        current_post_url=req.url or "",
+        rule_checks=rule_checks,
+        semantic_verifications=semantic_verifications,
+        mutations_log=mutations_log,
         errors=errors,
         warnings=warnings,
     )

@@ -1,68 +1,147 @@
 /**
- * panel.css — Inline result panel. Matches Bluesky design language (font, radius, dark/light).
- * Invariant: Styles only; no layout logic. Must not depend on JS for appearance.
+ * panel.css — Paper Trail inline panel. Orange/black theme.
  */
 
-/* Trace button in action bar */
+/* Trace button */
 .pt-trace-btn {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
-  color: var(--bsky-link, #0f7bff);
-  background: none;
-  border: none;
+  font-weight: 500;
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.4);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  margin-left: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-left: 6px;
+  transition: all 0.2s ease;
 }
 .pt-trace-btn:hover {
-  background: var(--bsky-hover, rgba(15, 123, 255, 0.1));
+  background: rgba(249, 115, 22, 0.2);
+  border-color: #f97316;
+  transform: translateY(-1px);
 }
 
-/* Loading state */
+/* Loading */
 .pt-loading {
   padding: 12px 16px;
-  color: var(--bsky-text-secondary, #687b8c);
+  color: #a3a3a3;
   font-size: 14px;
 }
 
-/* Panel container */
+/* Panel — orange/black */
 .pt-panel {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   margin: 8px 0 16px;
   padding: 0;
   border-radius: 12px;
-  background: var(--bsky-bg-secondary, #f5f5f5);
-  border: 1px solid var(--bsky-border, #e0e0e0);
+  background: #0a0a0a;
+  border: 1px solid #262626;
   overflow: hidden;
-}
-@media (prefers-color-scheme: dark) {
-  .pt-panel {
-    background: var(--bsky-bg-secondary, #1c1c1e);
-    border-color: var(--bsky-border, #38383a);
-  }
-  .pt-trace-btn { color: #5eb3f6; }
-  .pt-trace-btn:hover { background: rgba(94, 179, 246, 0.15); }
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 .pt-provenance {
   padding: 16px;
 }
 
+/* Card header: summary left, report button top right */
+.pt-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pt-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  flex: 1;
+  min-width: 0;
+}
+.pt-one-liner {
+  font-size: 15px;
+  font-weight: 500;
+  color: #fafafa;
+  line-height: 1.4;
+}
+.pt-confidence {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.pt-confidence.pt-low {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+.pt-confidence.pt-medium {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+}
+.pt-confidence.pt-high {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+/* Report button — top right */
+.pt-report-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0a0a0a;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+}
+.pt-report-btn:hover {
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+}
+.pt-report-btn:active {
+  transform: translateY(0);
+}
+.pt-more-btn {
+  font-family: inherit;
+  font-size: 13px;
+  color: #f97316;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0;
+  margin-top: 12px;
+  transition: color 0.2s;
+}
+.pt-more-btn:hover { color: #fb923c; }
+.pt-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #262626;
+}
+
 .pt-card-title {
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--bsky-text-secondary, #687b8c);
+  letter-spacing: 0.08em;
+  color: #a3a3a3;
   margin-bottom: 8px;
 }
 
 .pt-card {
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--bsky-border, #e0e0e0);
+  border-bottom: 1px solid #262626;
 }
 .pt-card:last-child,
 .pt-timeline .pt-card:last-child,
@@ -71,24 +150,21 @@
 
 .pt-meta {
   font-size: 12px;
-  color: var(--bsky-text-secondary, #687b8c);
+  color: #a3a3a3;
   margin-bottom: 4px;
 }
 
 .pt-text {
-  color: var(--bsky-text, #000);
+  color: #e5e5e5;
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
-}
-@media (prefers-color-scheme: dark) {
-  .pt-text { color: #f5f5f5; }
 }
 
 .pt-mutation {
   font-size: 13px;
   font-style: italic;
-  color: var(--bsky-text-secondary, #687b8c);
+  color: #a3a3a3;
   margin-bottom: 6px;
 }
 
@@ -98,61 +174,57 @@
   gap: 6px 12px;
 }
 .pt-removed {
-  color: #c62828;
-  background: rgba(198, 40, 40, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  padding: 4px 8px;
+  border-radius: 6px;
   font-size: 13px;
 }
 .pt-added {
-  color: #2e7d32;
-  background: rgba(46, 125, 50, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.15);
+  padding: 4px 8px;
+  border-radius: 6px;
   font-size: 13px;
-}
-@media (prefers-color-scheme: dark) {
-  .pt-removed { color: #ef5350; background: rgba(239, 83, 80, 0.2); }
-  .pt-added { color: #66bb6a; background: rgba(102, 187, 106, 0.2); }
 }
 
 .pt-reply-text {
-  padding: 10px 12px;
-  background: var(--bsky-bg, #fff);
-  border: 1px solid var(--bsky-border, #e0e0e0);
+  padding: 12px 14px;
+  background: #171717;
+  border: 1px solid #262626;
   border-radius: 8px;
   margin-bottom: 8px;
   font-size: 14px;
+  color: #e5e5e5;
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
-}
-@media (prefers-color-scheme: dark) {
-  .pt-reply-text { background: #2c2c2e; border-color: #38383a; }
 }
 
 .pt-copy-btn {
   font-family: inherit;
   font-size: 13px;
-  font-weight: 500;
-  color: #fff;
-  background: var(--bsky-link, #0f7bff);
+  font-weight: 600;
+  color: #0a0a0a;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   border: none;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .pt-copy-btn:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
 }
 
 .pt-error {
   padding: 12px 16px;
-  color: #c62828;
+  color: #f87171;
   font-size: 14px;
 }
 .pt-warnings {
   font-size: 12px;
-  color: var(--bsky-text-secondary, #687b8c);
+  color: #a3a3a3;
   margin-top: 8px;
 }

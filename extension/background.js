@@ -8,6 +8,29 @@ const BACKEND = 'http://127.0.0.1:8080';
 const LOG = (...args) => DEBUG && console.log('[PaperTrail BG]', ...args);
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.type === 'REPORT') {
+    LOG('REPORT request');
+    fetch(`${BACKEND}/report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msg.payload || {}),
+    })
+      .then((r) => {
+        if (!r.ok) return Promise.reject(new Error(r.status + ' ' + r.statusText));
+        return r.text();
+      })
+      .then((html) => {
+        const base64 = btoa(unescape(encodeURIComponent(html)));
+        const dataUrl = 'data:text/html;base64,' + base64;
+        chrome.tabs.create({ url: dataUrl });
+        sendResponse({ ok: true });
+      })
+      .catch((e) => {
+        LOG('REPORT error', e.message);
+        sendResponse({ error: String(e.message) });
+      });
+    return true;
+  }
   if (msg.type === 'TRACE') {
     LOG('TRACE request', msg.payload?.text?.slice(0, 50));
     fetch(`${BACKEND}/trace`, {
