@@ -131,6 +131,58 @@ def _search_sync(keywords: list[str], exclude_url: str) -> list[RawPost]:
     return posts[:BLUESKY_MAX_POSTS]
 
 
+def _get_author_feed_sync(actor: str, limit: int) -> list[dict]:
+    """
+    Fetch last `limit` posts by actor (handle or DID). Public endpoint, no auth required.
+    Returns list of {"timestamp": iso str, "text": str} for bot-score analysis.
+    """
+    if not actor or not str(actor).strip():
+        return []
+    actor = str(actor).strip().lstrip("@")
+    try:
+        from atproto import Client
+    except ImportError:
+        logger.warning("atproto not installed; skipping author feed")
+        return []
+    out: list[dict] = []
+    try:
+        client = Client()
+        if BLUESKY_HANDLE and BLUESKY_APP_PASSWORD:
+            try:
+                client.login(BLUESKY_HANDLE, BLUESKY_APP_PASSWORD)
+            except Exception as e:
+                logger.warning("Bluesky login for author feed failed: %s", e)
+        resp = client.get_author_feed(actor, limit=min(limit, 100), filter="posts_no_replies")
+        feed = getattr(resp, "feed", None) or []
+        for item in feed:
+            post = getattr(item, "post", item)
+            rec = getattr(post, "record", post)
+            text = _post_text(rec) or _post_text(post)
+            ts = _parse_timestamp(rec)
+            out.append({"timestamp": ts, "text": text or ""})
+            if len(out) >= limit:
+                break
+    except Exception as e:
+        logger.warning("Author feed fetch failed for %s: %s", actor, e)
+    return out[:limit]
+
+
+async def get_author_feed_async(actor: str, limit: int) -> list[dict]:
+    """Async wrapper for author feed (last N posts). Returns [{"timestamp", "text"}, ...]."""
+    loop = asyncio.get_event_loop()
+    try:
+        return await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: _get_author_feed_sync(actor, limit)),
+            timeout=API_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("Author feed timed out for %s", actor)
+        return []
+    except Exception as e:
+        logger.warning("Author feed error: %s", e)
+        return []
+
+
 async def search_bluesky(keywords: list[str], exclude_url: str | None = None) -> list[RawPost]:
     """
     Search Bluesky for posts matching keywords. Exclude post at exclude_url.

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # --- User-facing summary (extension sees primarily this) ---
@@ -59,6 +59,13 @@ class MutationRecord(BaseModel):
     confidence: float = Field(0.0, ge=0, le=1)
     agent_id: str = Field("")
 
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def clamp_confidence(cls, v: float) -> float:
+        """Clamp to [0, 1] to avoid float precision errors (e.g. 1.0000000000000002)."""
+        x = float(v) if v is not None else 0.0
+        return max(0.0, min(1.0, x))
+
 
 class ProvenanceEdge(BaseModel):
     """Edge A -> B: B derived from A."""
@@ -67,6 +74,13 @@ class ProvenanceEdge(BaseModel):
     evidence_score: float = Field(0.0, ge=0, le=1)
     evidence_types: list[str] = Field(default_factory=list, description="quote_overlap, ngram, paraphrase")
     mutations: list[MutationRecord] = Field(default_factory=list)
+
+    @field_validator("evidence_score", mode="before")
+    @classmethod
+    def clamp_evidence_score(cls, v: float) -> float:
+        """Clamp to [0, 1] to avoid float precision errors."""
+        x = float(v) if v is not None else 0.0
+        return max(0.0, min(1.0, x))
 
 
 class ProvenanceGraph(BaseModel):
@@ -148,6 +162,14 @@ class DiffResult(BaseModel):
     added: list[str] = Field(default_factory=list, description="Phrases added in current")
 
 
+# --- Bot score (author feed: timing + post patterns) ---
+class BotScore(BaseModel):
+    """Heuristic bot-likelihood from last N posts (timing, rate, length uniformity)."""
+    score: float = Field(0.0, ge=0, le=1, description="0=human-like, 1=bot-like")
+    signal: str = Field("", description="Short explanation (e.g. 'very regular posting times')")
+    posts_analyzed: int = Field(0, description="Number of recent posts used")
+
+
 # --- Same-message spread (neutral: many accounts sharing one message) ---
 class SameMessageSpread(BaseModel):
     """Detected when the same message appears across many distinct accounts (neutral pattern label)."""
@@ -172,5 +194,6 @@ class ProvenanceResponse(BaseModel):
     semantic_verifications: list[SemanticVerificationResult] = Field(default_factory=list)
     mutations_log: list[MutationLogEntry] = Field(default_factory=list)
     same_message_spread: SameMessageSpread | None = Field(None, description="Set when same message appears across many accounts")
+    bot_score: BotScore | None = Field(None, description="Bot-likelihood from author's recent posts (Bluesky only)")
     errors: list[str] = Field(default_factory=list, description="Non-fatal errors (e.g. scraper timeout)")
     warnings: list[str] = Field(default_factory=list, description="e.g. no Reddit results")

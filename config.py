@@ -89,6 +89,10 @@ MESSAGE_EXTRACTION_MAX_CHARS = 500  # Cap post text for message extraction
 # Same-message detector: alert when this many or more distinct accounts carry the same message
 PROPAGATION_ACCOUNTS_ALERT_THRESHOLD = 3
 
+# --- Bot score (author feed: last N posts, timing + patterns) ---
+BOT_SCORE_ENABLED = True
+BOT_SCORE_POSTS_LIMIT = 20  # Fetch this many recent posts for timing/length analysis
+
 # --- Backend ---
 BACKEND_HOST = os.environ.get("BACKEND_HOST", "127.0.0.1")
 BACKEND_PORT = int(os.environ.get("BACKEND_PORT", "8000"))

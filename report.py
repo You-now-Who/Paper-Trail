@@ -48,6 +48,7 @@ def generate_report(data: dict[str, Any]) -> str:
     total_sources = data.get("total_sources_checked", 0)
     provenance_graph = data.get("provenance_graph") or {}
     same_message_spread = data.get("same_message_spread") or {}
+    bot_score_data = data.get("bot_score")
 
     # Build provenance graph nodes: use provenance_graph if available (supports branching)
     nodes: list[dict] = []
@@ -333,6 +334,16 @@ def generate_report(data: dict[str, Any]) -> str:
         <span class="text-zinc-500 text-sm">Sources: {total_sources}</span>
       </div>
     </section>
+
+    {f'''<section class="mb-8 animate-fade-in rounded-2xl border border-zinc-700 bg-zinc-900/40 p-4" style="animation-delay: 60ms">
+      <h2 class="text-xs uppercase tracking-wider text-zinc-500 mb-2">Account bot score</h2>
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="text-2xl font-bold {("text-amber-400" if (bot_score_data.get("score") or 0) >= 0.5 else "text-zinc-400")}">{int((bot_score_data.get("score") or 0) * 100)}%</span>
+        <span class="text-zinc-500 text-sm">(0 = human-like, 100 = bot-like)</span>
+        <span class="text-zinc-400 text-sm">{_escape(bot_score_data.get("signal") or "")}</span>
+        <span class="text-zinc-600 text-xs">from last {bot_score_data.get("posts_analyzed") or 0} posts</span>
+      </div>
+    </section>''' if bot_score_data and bot_score_data.get("posts_analyzed", 0) >= 2 else ""}
 
     {same_message_section}
 

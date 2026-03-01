@@ -29,6 +29,7 @@ from schemas import (
     MutationLogEntry,
     ProvenanceGraph,
     SameMessageSpread,
+    BotScore,
 )
 from config import (
     OPENAI_API_KEY,
@@ -39,12 +40,15 @@ from config import (
     PROPAGATION_ACCOUNTS_ALERT_THRESHOLD,
     MAX_SEARCH_QUERIES,
     SEARCH_POST_SNIPPET_LEN,
+    BOT_SCORE_ENABLED,
+    BOT_SCORE_POSTS_LIMIT,
 )
 from prompts import KEYWORD_EXTRACTION_SYSTEM, KEYWORD_EXTRACTION_USER_TEMPLATE
 
 # Scrapers and agents
 from scrapers.reddit import scrape_reddit_async
-from scrapers.bluesky import search_bluesky
+from scrapers.bluesky import search_bluesky, get_author_feed_async
+from agents.bot_score import compute_bot_score
 from agents.cluster import cluster_posts
 from agents.provenance import build_timeline
 from agents.provenance_graph import build_provenance_graph, graph_to_origin_and_timeline
@@ -58,6 +62,21 @@ from report import generate_report
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+async def _get_bot_score(author_feed_task: asyncio.Task | None) -> BotScore | None:
+    """Await author feed task and return BotScore if we have enough posts."""
+    if author_feed_task is None:
+        return None
+    try:
+        posts = await author_feed_task
+        if not posts or len(posts) < 2:
+            return BotScore(score=0.0, signal="Not enough posts", posts_analyzed=len(posts) if posts else 0)
+        score, signal = compute_bot_score(posts)
+        return BotScore(score=score, signal=signal, posts_analyzed=len(posts))
+    except Exception as e:
+        logger.warning("Bot score failed: %s", e)
+        return None
 
 app = FastAPI(title="Paper Trail", version="0.1.0")
 app.add_middleware(
@@ -180,9 +199,14 @@ async def trace(req: TraceRequest) -> ProvenanceResponse:
         logger.warning("Keyword extraction error: %s", e)
         keywords = [(req.text or "post")[:80]] if req.text else ["post"]
 
-    # Parallel scrapers with timeout
+    # Parallel: scrapers + author feed for bot score (Bluesky handle)
     reddit_task = asyncio.create_task(scrape_reddit_async(keywords))
     bluesky_task = asyncio.create_task(search_bluesky(keywords, exclude_url=req.url))
+    author_feed_task: asyncio.Task | None = None
+    if BOT_SCORE_ENABLED and (req.author or "").strip():
+        author_feed_task = asyncio.create_task(
+            get_author_feed_async((req.author or "").strip().lstrip("@"), BOT_SCORE_POSTS_LIMIT)
+        )
 
     try:
         reddit_posts, bluesky_posts = await asyncio.wait_for(
@@ -234,6 +258,7 @@ async def trace(req: TraceRequest) -> ProvenanceResponse:
         )
         rule_checks = run_structural_rules([], [], 0)
         user_summary = build_user_summary(origin, [], diff, rule_checks, [], 0, errors, warnings)
+        bot_score = await _get_bot_score(author_feed_task)
         return ProvenanceResponse(
             user_summary=user_summary,
             origin=origin,
@@ -245,6 +270,7 @@ async def trace(req: TraceRequest) -> ProvenanceResponse:
             rule_checks=rule_checks,
             semantic_verifications=[],
             mutations_log=[],
+            bot_score=bot_score,
             errors=errors,
             warnings=warnings,
         )
@@ -396,6 +422,7 @@ async def trace(req: TraceRequest) -> ProvenanceResponse:
             accounts=list(provenance_graph.propagation_authors) if provenance_graph else [],
         )
 
+    bot_score = await _get_bot_score(author_feed_task)
     return ProvenanceResponse(
         user_summary=user_summary,
         origin=origin,
@@ -409,6 +436,7 @@ async def trace(req: TraceRequest) -> ProvenanceResponse:
         semantic_verifications=semantic_verifications,
         mutations_log=mutations_log,
         same_message_spread=same_message_spread,
+        bot_score=bot_score,
         errors=errors,
         warnings=warnings,
     )
