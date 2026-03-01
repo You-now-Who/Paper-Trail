@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Paper Trail",
+  "version": "1.0",
+  "description": "Trace narrative provenance from Bluesky to Reddit and back.",
+  "host_permissions": [
+    "https://bsky.app/*",
+    "https://*.bsky.app/*",
+    "http://localhost:8080/*",
+    "http://127.0.0.1:8080/*"
+  ],
+  "permissions": ["activeTab", "scripting"],
+  "content_scripts": [
+    {
+      "matches": ["https://bsky.app/*", "https://*.bsky.app/*"],
+      "js": ["content.js"],
+      "css": ["panel.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

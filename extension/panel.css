@@ -1,0 +1,158 @@
+/**
+ * panel.css — Inline result panel. Matches Bluesky design language (font, radius, dark/light).
+ * Invariant: Styles only; no layout logic. Must not depend on JS for appearance.
+ */
+
+/* Trace button in action bar */
+.pt-trace-btn {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: var(--bsky-link, #0f7bff);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+.pt-trace-btn:hover {
+  background: var(--bsky-hover, rgba(15, 123, 255, 0.1));
+}
+
+/* Loading state */
+.pt-loading {
+  padding: 12px 16px;
+  color: var(--bsky-text-secondary, #687b8c);
+  font-size: 14px;
+}
+
+/* Panel container */
+.pt-panel {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  margin: 8px 0 16px;
+  padding: 0;
+  border-radius: 12px;
+  background: var(--bsky-bg-secondary, #f5f5f5);
+  border: 1px solid var(--bsky-border, #e0e0e0);
+  overflow: hidden;
+}
+@media (prefers-color-scheme: dark) {
+  .pt-panel {
+    background: var(--bsky-bg-secondary, #1c1c1e);
+    border-color: var(--bsky-border, #38383a);
+  }
+  .pt-trace-btn { color: #5eb3f6; }
+  .pt-trace-btn:hover { background: rgba(94, 179, 246, 0.15); }
+}
+
+.pt-provenance {
+  padding: 16px;
+}
+
+.pt-card-title {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--bsky-text-secondary, #687b8c);
+  margin-bottom: 8px;
+}
+
+.pt-card {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--bsky-border, #e0e0e0);
+}
+.pt-card:last-child,
+.pt-timeline .pt-card:last-child,
+.pt-diff:last-child,
+.pt-reply:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.pt-meta {
+  font-size: 12px;
+  color: var(--bsky-text-secondary, #687b8c);
+  margin-bottom: 4px;
+}
+
+.pt-text {
+  color: var(--bsky-text, #000);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+@media (prefers-color-scheme: dark) {
+  .pt-text { color: #f5f5f5; }
+}
+
+.pt-mutation {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--bsky-text-secondary, #687b8c);
+  margin-bottom: 6px;
+}
+
+.pt-diff-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.pt-removed {
+  color: #c62828;
+  background: rgba(198, 40, 40, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.pt-added {
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+@media (prefers-color-scheme: dark) {
+  .pt-removed { color: #ef5350; background: rgba(239, 83, 80, 0.2); }
+  .pt-added { color: #66bb6a; background: rgba(102, 187, 106, 0.2); }
+}
+
+.pt-reply-text {
+  padding: 10px 12px;
+  background: var(--bsky-bg, #fff);
+  border: 1px solid var(--bsky-border, #e0e0e0);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+@media (prefers-color-scheme: dark) {
+  .pt-reply-text { background: #2c2c2e; border-color: #38383a; }
+}
+
+.pt-copy-btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--bsky-link, #0f7bff);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.pt-copy-btn:hover {
+  opacity: 0.9;
+}
+
+.pt-error {
+  padding: 12px 16px;
+  color: #c62828;
+  font-size: 14px;
+}
+.pt-warnings {
+  font-size: 12px;
+  color: var(--bsky-text-secondary, #687b8c);
+  margin-top: 8px;
+}
