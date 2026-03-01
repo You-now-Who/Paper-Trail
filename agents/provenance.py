@@ -89,6 +89,7 @@ def build_timeline(
                     {"role": "user", "content": PROVENANCE_USER_TEMPLATE.format(cluster_blocks=cluster_blocks)},
                 ],
                 max_tokens=500,
+                temperature=0,
             )
             raw = (resp.choices[0].message.content or "").strip()
             for line in raw.splitlines():

@@ -38,6 +38,7 @@ def narrative_diff(origin_text: str, current_text: str) -> DiffResult:
                 {"role": "user", "content": DIFF_USER_TEMPLATE.format(origin_text=origin_text or "(none)", current_text=current_text or "(none)")},
             ],
             max_tokens=400,
+            temperature=0,
         )
         raw = (resp.choices[0].message.content or "").strip()
         # Strip markdown code block if present

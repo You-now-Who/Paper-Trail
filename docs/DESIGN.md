@@ -217,6 +217,11 @@ class MutationLogEntry(BaseModel):
 - Provenance graph (DAG) and mutation graph as JSON.
 - Optional: simple internal UI (e.g. Streamlit) for researchers.
 
+### Message propagation (smear-campaign focus)
+- **Track one message**: Extract the core claim/message from the current post; track that same message as it propagates asynchronously across many nodes (not just one lineage).
+- **Propagation nodes**: Each graph node is scored for “carries this message” (quote + paraphrase vs. message). Nodes above threshold are marked and highlighted (verbatim / paraphrased / shifted).
+- **Report**: Shows “Tracked message” and “This message appears in N nodes” so the same narrative spreading across posts is visible for smear/coordinated-campaign awareness.
+
 ---
 
 ## 7. File / Module Layout (Proposed)
@@ -277,3 +282,4 @@ Tunable via config.
 | Structural rules       | Deterministic (timestamp, corpus); semantic = model   |
 | Scale of agents        | Parallel mutation agents; structured MutationLogEntry |
 | Mutation logging       | Append-only JSONL; queryable by trace/agent/type      |
+| Reliability            | Multi-signal edges (≥2 of quote/ngram/paraphrase), abstention when weak, origin-in-corpus rule, confidence from rules+mutations, evidence spans in report, LLM temperature=0, fallbacks for message/keywords |

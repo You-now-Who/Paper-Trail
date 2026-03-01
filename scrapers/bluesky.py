@@ -17,6 +17,7 @@ from config import (
     API_TIMEOUT_SECONDS,
     BLUESKY_HANDLE,
     BLUESKY_APP_PASSWORD,
+    MAX_SEARCH_QUERIES,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ def _search_sync(keywords: list[str], exclude_url: str) -> list[RawPost]:
         logger.warning("Bluesky login failed: %s", e)
         return []
 
-    for q in keywords[:5]:
+    for q in keywords[:MAX_SEARCH_QUERIES]:
         if len(posts) >= BLUESKY_MAX_POSTS:
             break
         try:

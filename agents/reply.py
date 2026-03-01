@@ -51,6 +51,7 @@ def draft_reply(
                 },
             ],
             max_tokens=150,
+            temperature=0,
         )
         reply = (resp.choices[0].message.content or "").strip()[:300]
         return reply if reply else fallback

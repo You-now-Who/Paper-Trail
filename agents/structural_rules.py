@@ -28,6 +28,23 @@ def check_timestamp_order(timeline: list["TimelineEntry"]) -> RuleCheckResult:
     return RuleCheckResult(rule_id="TIMESTAMP_ORDER", passed=True, detail="Ordered ascending")
 
 
+def check_origin_in_corpus(origin_text: str, corpus: list["RawPost"]) -> RuleCheckResult:
+    """Verify origin text appears (as substring) in at least one corpus post."""
+    o = (origin_text or "").strip()[:300]
+    if not o:
+        return RuleCheckResult(rule_id="ORIGIN_IN_CORPUS", passed=True, detail="No origin text")
+    if not corpus:
+        return RuleCheckResult(rule_id="ORIGIN_IN_CORPUS", passed=False, detail="No corpus to verify")
+    norm = " ".join(o.split())
+    for p in corpus:
+        c = " ".join((p.text or "").split())
+        if len(norm) >= 20 and norm in c:
+            return RuleCheckResult(rule_id="ORIGIN_IN_CORPUS", passed=True, detail="Origin found in corpus")
+        if len(norm) < 20 and c and norm in c:
+            return RuleCheckResult(rule_id="ORIGIN_IN_CORPUS", passed=True, detail="Origin found in corpus")
+    return RuleCheckResult(rule_id="ORIGIN_IN_CORPUS", passed=False, detail="Origin text not found in corpus")
+
+
 def check_corpus_valid(corpus: list["RawPost"], corpus_size: int) -> RuleCheckResult:
     """Verify corpus exists and indices would be in range."""
     if corpus_size == 0:
@@ -43,9 +60,12 @@ def run_structural_rules(
     corpus: list["RawPost"],
     timeline: list["TimelineEntry"],
     corpus_size: int,
+    origin_text: str = "",
 ) -> list[RuleCheckResult]:
     """Run all structural rules. Returns list of RuleCheckResult."""
     results: list[RuleCheckResult] = []
     results.append(check_corpus_valid(corpus, corpus_size))
     results.append(check_timestamp_order(timeline))
+    if origin_text is not None and corpus:
+        results.append(check_origin_in_corpus(origin_text, corpus))
     return results

@@ -37,6 +37,49 @@ class SemanticVerificationResult(BaseModel):
     method: str = Field("embeddings", description="embeddings or llm")
 
 
+# --- Provenance graph ---
+class ProvenanceNode(BaseModel):
+    """Node in provenance graph. index=-1 for current post."""
+    index: int = Field(..., description="Corpus index or -1 for current")
+    text: str = Field("")
+    source: str = Field("")
+    community: str = Field("")
+    timestamp: str = Field("")
+    url: str = Field("")
+    author: str = Field("", description="Handle/username if available (for multi-account detection)")
+    is_current: bool = Field(False)
+    propagation_kind: str = Field("", description="If node carries the tracked message: verbatim, paraphrased, shifted")
+
+
+class MutationRecord(BaseModel):
+    """Per-edge mutation: how B changed relative to A."""
+    type: str = Field("", description="quote_reuse, quote_edit, paraphrase, etc.")
+    source_span: str = Field("")
+    target_span: str = Field("")
+    confidence: float = Field(0.0, ge=0, le=1)
+    agent_id: str = Field("")
+
+
+class ProvenanceEdge(BaseModel):
+    """Edge A -> B: B derived from A."""
+    source: int = Field(..., description="Source node index")
+    target: int = Field(..., description="Target node index")
+    evidence_score: float = Field(0.0, ge=0, le=1)
+    evidence_types: list[str] = Field(default_factory=list, description="quote_overlap, ngram, paraphrase")
+    mutations: list[MutationRecord] = Field(default_factory=list)
+
+
+class ProvenanceGraph(BaseModel):
+    """Provenance graph with nodes, edges, main path. Tracks one message propagating across nodes (smear-campaign focus)."""
+    nodes: list[ProvenanceNode] = Field(default_factory=list)
+    edges: list[ProvenanceEdge] = Field(default_factory=list)
+    main_path: list[int] = Field(default_factory=list, description="Node indices root -> current")
+    alternative_paths: list[list[int]] = Field(default_factory=list)
+    propagated_message: str = Field("", description="The core claim/message being tracked as it spreads")
+    propagation_node_indices: list[int] = Field(default_factory=list, description="Node positions that carry this message (async propagation)")
+    propagation_authors: list[str] = Field(default_factory=list, description="Unique authors among propagation nodes (multiple accounts saying same thing)")
+
+
 # --- Mutation logging ---
 class MutationLogEntry(BaseModel):
     """One mutation from diff/provenance. Append-only audit trail."""
@@ -105,6 +148,15 @@ class DiffResult(BaseModel):
     added: list[str] = Field(default_factory=list, description="Phrases added in current")
 
 
+# --- Same-message spread (neutral: many accounts sharing one message) ---
+class SameMessageSpread(BaseModel):
+    """Detected when the same message appears across many distinct accounts (neutral pattern label)."""
+    detected: bool = Field(False, description="True when account_count >= threshold")
+    account_count: int = Field(0, description="Number of distinct accounts carrying the message")
+    message_snippet: str = Field("", description="Short snippet of the shared message")
+    accounts: list[str] = Field(default_factory=list, description="Handles/usernames (e.g. for display)")
+
+
 # --- Full response to extension ---
 class ProvenanceResponse(BaseModel):
     """Complete response. user_summary is primary for extension; rest for internal/logging."""
@@ -115,8 +167,10 @@ class ProvenanceResponse(BaseModel):
     reply_draft: str = Field("", description="Ready-to-post Bluesky reply with receipts")
     total_sources_checked: int = Field(0, description="Reddit + Bluesky posts considered")
     current_post_url: str = Field("", description="URL of the post user traced (for report)")
+    provenance_graph: ProvenanceGraph | None = Field(None, description="Graph with branching/merging")
     rule_checks: list[RuleCheckResult] = Field(default_factory=list, description="Structural rule results")
     semantic_verifications: list[SemanticVerificationResult] = Field(default_factory=list)
     mutations_log: list[MutationLogEntry] = Field(default_factory=list)
+    same_message_spread: SameMessageSpread | None = Field(None, description="Set when same message appears across many accounts")
     errors: list[str] = Field(default_factory=list, description="Non-fatal errors (e.g. scraper timeout)")
     warnings: list[str] = Field(default_factory=list, description="e.g. no Reddit results")

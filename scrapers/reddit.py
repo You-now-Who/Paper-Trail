@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 
 from schemas import RawPost
-from config import REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT, REDDIT_MAX_POSTS, API_TIMEOUT_SECONDS
+from config import REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT, REDDIT_MAX_POSTS, API_TIMEOUT_SECONDS, MAX_SEARCH_QUERIES
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +40,11 @@ def search_reddit(keywords: list[str]) -> list[RawPost]:
             client_secret=REDDIT_CLIENT_SECRET,
             user_agent=REDDIT_USER_AGENT,
         )
-        for q in keywords[:5]:
+        for q in keywords[:MAX_SEARCH_QUERIES]:
             if len(posts) >= REDDIT_MAX_POSTS:
                 break
             try:
-                for submission in reddit.subreddit("all").search(q, sort="new", time_filter="year", limit=25):
+                for submission in reddit.subreddit("all").search(q, sort="new", time_filter="week", limit=25):
                     url = getattr(submission, "url", "") or f"https://reddit.com{submission.permalink}"
                     if url in seen_urls:
                         continue

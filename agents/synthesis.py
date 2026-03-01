@@ -22,8 +22,9 @@ if TYPE_CHECKING:
 def _aggregate_confidence(
     rule_checks: list["RuleCheckResult"],
     semantic_verifications: list["SemanticVerificationResult"],
+    mutations_log: list["MutationLogEntry"] | None = None,
 ) -> str:
-    """Return 'low' | 'medium' | 'high'."""
+    """Return 'low' | 'medium' | 'high'. Rules + semantic + mutation confidence; unverified caps at medium."""
     r = 1.0
     if rule_checks:
         passed = sum(1 for rc in rule_checks if rc.passed)
@@ -33,6 +34,11 @@ def _aggregate_confidence(
     if semantic_verifications:
         confs = [sv.confidence for sv in semantic_verifications]
         c = sum(confs) / len(confs) if confs else 0.5
+
+    # Mutation confidence: mean of evidence-backed mutations
+    if mutations_log:
+        m_confs = [m.confidence for m in mutations_log]
+        c = (c + sum(m_confs) / len(m_confs)) / 2 if m_confs else c
 
     # Unverified claim (below threshold) caps at medium
     unverified = bool(semantic_verifications) and any(sv.confidence < SEMANTIC_SIMILARITY_THRESHOLD for sv in semantic_verifications)
@@ -53,9 +59,10 @@ def build_user_summary(
     total_sources: int,
     errors: list[str],
     warnings: list[str],
+    mutations_log: list["MutationLogEntry"] | None = None,
 ) -> UserSummary:
     """Build minimal UserSummary for extension."""
-    confidence = _aggregate_confidence(rule_checks, semantic_verifications)
+    confidence = _aggregate_confidence(rule_checks, semantic_verifications, mutations_log)
 
     source = origin.source or "bluesky"
     community = origin.community or "bluesky"
